@@ -17,6 +17,7 @@ Inboxes sort by time. Founders need to sort by consequence. A board member who e
 - **Flags meetings that need prep.** Anything in the next 48 hours with no agenda, or with attendees still waiting on you.
 - **Explains every score.** Each point awarded comes with a reason ("Key contact, Board pack due Tuesday, Meeting Thursday 14:00"). The ranking is never a black box.
 - **Hit tomorrow.** Not doing it today? Push it to tomorrow and it moves off today's list. It comes back the next day with 10 extra points, because you made a commitment, and another 10 for every further push, so repeated delays get harder to ignore. Commitments are saved in your browser.
+- **Delegate.** Hand an item to a colleague: HitList opens a Gmail draft to them with the sender, subject, message and your note, asking them to reply directly and copy you in. Because the handover is an ordinary email, it lands on *their* HitList automatically, with no shared database needed. On your side the item moves to a Delegated section and comes back after 2 days with "check it's handled". Mark handled clears it; if the sender writes again, it comes straight back.
 - **Drafts replies with Claude.** Short, British English, no invented facts: anything specific is left as a `[placeholder]` for you to fill in.
 
 ## How the score works
@@ -49,7 +50,8 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 - **Slack:** clean API, DMs and mentions fit the same "waiting on you" model.
 - **WhatsApp:** deliberately left out of v1. There's no official API for personal accounts, and the unofficial libraries that scrape WhatsApp Web break its terms and risk a ban. Options are the WhatsApp Business Cloud API for a business number, or an aggregator.
 - **Dismiss**, for items you've decided not to answer at all.
-- **Sync commitments across devices** (currently saved per browser).
+- **Sync commitments and delegations across devices** (currently saved per browser).
+- **True forwarding** with the full thread and attachments, which needs Gmail's compose permission rather than read-only.
 - **Morning digest** by email at 8am.
 
 ## Run it locally

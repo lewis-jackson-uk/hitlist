@@ -43,8 +43,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         </div>
       </header>
       {error && ERRORS[error] && <p className="banner error">{ERRORS[error]}</p>}
-      {/* One item arrives already pushed from yesterday, so visitors can see Hit tomorrow at work */}
-      <BriefView brief={brief} seed={{ "d-vat": { until: londonDayKey(now), pushes: 1 } }} />
+      {/* Seeded so visitors can see Hit tomorrow and Delegate at work without waiting a day */}
+      <BriefView
+        brief={brief}
+        seed={{ "d-vat": { until: londonDayKey(now), pushes: 1 } }}
+        seedDelegations={{
+          "d-brand": {
+            to: "sam@yourstartup.co",
+            note: "Pick whichever logo the team prefers.",
+            at: now.toISOString(),
+            messageCount: items.find((i) => i.id === "d-brand")!.messageCount,
+          },
+        }}
+      />
       <Footer />
     </main>
   );

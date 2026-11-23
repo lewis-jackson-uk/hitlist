@@ -1,7 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { COMMITMENT_BONUS, applyCommitments, bringBack, commitToTomorrow, prune, type Commitments } from "@/lib/commitments";
+import {
+  FOLLOW_UP_DAYS,
+  applyDelegations,
+  delegate,
+  handoverUrl,
+  isValidEmail,
+  markHandled,
+  pruneDelegations,
+  takeBack,
+  type Delegations,
+} from "@/lib/delegation";
 import type { Brief, RankedItem } from "@/lib/types";
 import { WEIGHTS, humanDuration } from "@/lib/scoring";
 
@@ -39,9 +50,88 @@ function whenLabel(iso: string, now: Date): string {
   return `${fmt({ weekday: "short" })} ${time}`;
 }
 
-function Row({ r, now, defaultOpen, onHitTomorrow }: { r: RankedItem; now: Date; defaultOpen: boolean; onHitTomorrow: () => void }) {
+function DelegateForm({
+  r,
+  account,
+  recent,
+  onDelegate,
+  onCancel,
+}: {
+  r: RankedItem;
+  account?: string;
+  recent: string[];
+  onDelegate: (to: string, note: string) => void;
+  onCancel: () => void;
+}) {
+  const [to, setTo] = useState(recent[0] ?? "");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const formId = `delegate-${r.item.id}`;
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!isValidEmail(to)) {
+      setError("Enter an email address, like sam@yourteam.co");
+      return;
+    }
+    window.open(handoverUrl(r.item, to, note, account), "_blank", "noopener");
+    onDelegate(to, note);
+  }
+
+  return (
+    <form className="delegate" onSubmit={submit} noValidate>
+      <label htmlFor={`${formId}-to`}>Delegate to</label>
+      <input
+        id={`${formId}-to`}
+        type="email"
+        list={`${formId}-recent`}
+        value={to}
+        onChange={(e) => { setTo(e.target.value); setError(""); }}
+        placeholder="sam@yourteam.co"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${formId}-err` : undefined}
+        autoFocus
+      />
+      <datalist id={`${formId}-recent`}>
+        {recent.map((e) => <option key={e} value={e} />)}
+      </datalist>
+      <label htmlFor={`${formId}-note`}>Note (optional)</label>
+      <input
+        id={`${formId}-note`}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="She's expecting a yes by Monday."
+      />
+      {error && <p className="field-error" id={`${formId}-err`}>{error}</p>}
+      <p className="hint">Opens a Gmail draft with the context filled in. You press send.</p>
+      <div className="actions">
+        <button className="btn" type="submit">Draft handover email</button>
+        <button className="btn ghost" type="button" onClick={onCancel}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+function Row({
+  r,
+  now,
+  defaultOpen,
+  account,
+  recentDelegates,
+  onHitTomorrow,
+  onDelegate,
+}: {
+  r: RankedItem;
+  now: Date;
+  defaultOpen: boolean;
+  account?: string;
+  recentDelegates: string[];
+  onHitTomorrow: () => void;
+  onDelegate: (to: string, note: string) => void;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
+  const [delegating, setDelegating] = useState(false);
   const h = heat(r.score);
   const waited = humanDuration(now.getTime() - new Date(r.item.lastMessageAt).getTime());
   const id = `row-${r.item.id}`;
@@ -95,7 +185,21 @@ function Row({ r, now, defaultOpen, onHitTomorrow }: { r: RankedItem; now: Date;
               <button className="btn ghost" onClick={onHitTomorrow}>
                 Hit tomorrow
               </button>
+              {!delegating && (
+                <button className="btn ghost" onClick={() => setDelegating(true)}>
+                  Delegate
+                </button>
+              )}
             </div>
+            {delegating && (
+              <DelegateForm
+                r={r}
+                account={account}
+                recent={recentDelegates}
+                onDelegate={onDelegate}
+                onCancel={() => setDelegating(false)}
+              />
+            )}
           </div>
         )}
       </div>
@@ -104,26 +208,26 @@ function Row({ r, now, defaultOpen, onHitTomorrow }: { r: RankedItem; now: Date;
 }
 
 /**
- * Commitments live in this browser only (HitList has no database).
- * Kept per account so a demo visit never mixes with your real inbox.
+ * Commitments, delegations and recent delegates live in this browser only (HitList has no database).
+ * Keyed per account so a demo visit never mixes with your real inbox.
  */
-function useCommitments(brief: Brief, seed: Commitments) {
-  const key = `hitlist:commitments:${brief.mode}:${brief.account ?? ""}`;
-  const [all, setAll] = useState<Commitments>(seed);
+function useStored<T>(name: string, brief: Brief, seed: T, clean: (v: T) => T) {
+  const key = `hitlist:${name}:${brief.mode}:${brief.account ?? ""}`;
+  const [all, setAll] = useState<T>(seed);
 
   useEffect(() => {
-    let stored: Commitments = {};
+    let stored: Partial<T> = {};
     try {
       stored = JSON.parse(localStorage.getItem(key) ?? "{}");
     } catch {
       /* storage unavailable or corrupted; start fresh */
     }
-    setAll(prune({ ...seed, ...stored }, brief.ranked.map((r) => r.item.id)));
-    // seed is static per page load
+    setAll(clean(Array.isArray(seed) ? ((Array.isArray(stored) ? stored : seed) as T) : ({ ...seed, ...stored } as T)));
+    // seed and clean are static per page load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, brief.ranked]);
 
-  function update(next: Commitments) {
+  function update(next: T) {
     setAll(next);
     try {
       localStorage.setItem(key, JSON.stringify(next));
@@ -134,10 +238,38 @@ function useCommitments(brief: Brief, seed: Commitments) {
   return [all, update] as const;
 }
 
-export function BriefView({ brief, seed = {} }: { brief: Brief; seed?: Commitments }) {
+export function BriefView({
+  brief,
+  seed = {},
+  seedDelegations = {},
+}: {
+  brief: Brief;
+  seed?: Commitments;
+  seedDelegations?: Delegations;
+}) {
   const now = new Date(brief.generatedAt);
-  const [commitments, setCommitments] = useCommitments(brief, seed);
-  const { today, later } = applyCommitments(brief.ranked, commitments, now);
+  const ids = brief.ranked.map((r) => r.item.id);
+  const [commitments, setCommitments] = useStored<Commitments>("commitments", brief, seed, (c) => prune(c, ids));
+  const [delegations, setDelegations] = useStored<Delegations>("delegations", brief, seedDelegations, (d) =>
+    pruneDelegations(d, ids),
+  );
+  const [recent, setRecent] = useStored<string[]>(
+    "delegates",
+    brief,
+    [...new Set(Object.values(seedDelegations).map((d) => d.to))],
+    (r) => r.slice(0, 8),
+  );
+  // Live mode opens drafts in your account; the demo has no real account to point at.
+  const account = brief.mode === "live" ? brief.account : undefined;
+
+  const { active, delegated } = applyDelegations(brief.ranked, delegations, now);
+  const { today, later } = applyCommitments(active, commitments, now);
+
+  function handOver(r: RankedItem, to: string, note: string) {
+    setDelegations(delegate(delegations, r.item, to, note, now));
+    const email = to.trim().toLowerCase();
+    setRecent([email, ...recent.filter((e) => e !== email)].slice(0, 8));
+  }
   return (
     <>
       {brief.prep.length > 0 && (
@@ -179,7 +311,10 @@ export function BriefView({ brief, seed = {} }: { brief: Brief; seed?: Commitmen
                 r={r}
                 now={now}
                 defaultOpen={i === 0}
+                account={account}
+                recentDelegates={recent}
                 onHitTomorrow={() => setCommitments(commitToTomorrow(commitments, r.item.id, now))}
+                onDelegate={(to, note) => handOver(r, to, note)}
               />
             ))}
           </ol>
@@ -208,6 +343,40 @@ export function BriefView({ brief, seed = {} }: { brief: Brief; seed?: Commitmen
         </section>
       )}
 
+      {delegated.length > 0 && (
+        <section className="section" aria-labelledby="delegated-h">
+          <h2 id="delegated-h">Delegated</h2>
+          <p className="section-sub">
+            Each one comes back to your list after {FOLLOW_UP_DAYS} days so you can check it was handled. If the sender
+            writes again, it comes straight back.
+          </p>
+          <ul className="later">
+            {delegated.map(({ r, d, daysAgo }) => (
+              <li key={r.item.id}>
+                <span>
+                  <span className="who">{r.item.from.name}</span>
+                  <span className="subject">{r.item.subject}</span>
+                  <span className="with">
+                    With {d.to} {daysAgo === 0 ? "since today" : `for ${daysAgo} day${daysAgo === 1 ? "" : "s"}`}
+                  </span>
+                </span>
+                <span className="actions">
+                  <button className="btn ghost" onClick={() => setDelegations(markHandled(delegations, r.item.id))}>
+                    Mark handled
+                  </button>
+                  <button className="btn ghost" onClick={() => setDelegations(takeBack(delegations, r.item.id))}>
+                    Take back
+                  </button>
+                  <a className="btn ghost" href={handoverUrl(r.item, d.to, d.note ?? "", account)} target="_blank" rel="noreferrer">
+                    Redraft email
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <details className="how">
         <summary>How the ranking works</summary>
         <p>
@@ -227,7 +396,8 @@ export function BriefView({ brief, seed = {} }: { brief: Brief; seed?: Commitmen
         </table>
         <p>
           Time waiting counts half for cold emails with nothing urgent in them, so old sales pitches sink. Newsletters,
-          receipts and anything with an unsubscribe link are filtered out before scoring.
+          receipts and anything with an unsubscribe link are filtered out before scoring. Delegated items leave the
+          list and come back after {FOLLOW_UP_DAYS} days for a check-in.
         </p>
       </details>
     </>

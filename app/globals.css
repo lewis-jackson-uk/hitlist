@@ -143,3 +143,21 @@ details.how summary { cursor: pointer; font-weight: 600; font-size: 17px; }
 }
 .later .subject { color: var(--muted); font-size: 15px; }
 .later .btn { font-size: 14px; padding: 6px 12px; flex-shrink: 0; }
+
+/* Delegate form, inside an open row */
+.delegate { display: grid; gap: 6px; max-width: 440px; padding: 14px; background: var(--paper); border-radius: 8px; }
+.delegate label { font-size: 14px; font-weight: 600; }
+.delegate input {
+  font: inherit; font-size: 15px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--ink); margin-bottom: 6px;
+}
+.delegate input:focus-visible { border-color: var(--focus); outline: none; box-shadow: 0 0 0 3px rgba(36, 87, 197, 0.2); }
+.delegate input[aria-invalid="true"] { border-color: var(--hot); }
+.field-error { margin: 0; color: var(--hot); font-size: 14px; }
+.hint { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
+.later .with { display: block; font-size: 14px; color: var(--muted); }
+.later .actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .later li { flex-direction: column; align-items: flex-start; }
+  .later .actions { justify-content: flex-start; }
+}
