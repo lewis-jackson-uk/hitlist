@@ -134,3 +134,12 @@ details.how summary { cursor: pointer; font-weight: 600; font-size: 17px; }
   .detail { animation: open 160ms ease-out; }
   @keyframes open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 }
+
+/* Hitting tomorrow: quieter than today's list on purpose */
+.later { list-style: none; margin: 0; padding: 0; }
+.later li {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.later .subject { color: var(--muted); font-size: 15px; }
+.later .btn { font-size: 14px; padding: 6px 12px; flex-shrink: 0; }

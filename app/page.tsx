@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { buildBrief } from "@/lib/brief";
 import { DEMO_ACCOUNT, DEMO_KEY_CONTACTS, demoData } from "@/lib/demo-data";
 import { googleConfigured } from "@/lib/google";
+import { londonDayKey } from "@/lib/commitments";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         </div>
       </header>
       {error && ERRORS[error] && <p className="banner error">{ERRORS[error]}</p>}
-      <BriefView brief={brief} />
+      {/* One item arrives already pushed from yesterday, so visitors can see Hit tomorrow at work */}
+      <BriefView brief={brief} seed={{ "d-vat": { until: londonDayKey(now), pushes: 1 } }} />
       <Footer />
     </main>
   );

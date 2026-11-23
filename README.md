@@ -16,6 +16,7 @@ Inboxes sort by time. Founders need to sort by consequence. A board member who e
 - **Cross-references your calendar.** If you're meeting someone soon and they have an unanswered email, that thread jumps up the list. This is the part a reminder app can't do.
 - **Flags meetings that need prep.** Anything in the next 48 hours with no agenda, or with attendees still waiting on you.
 - **Explains every score.** Each point awarded comes with a reason ("Key contact, Board pack due Tuesday, Meeting Thursday 14:00"). The ranking is never a black box.
+- **Hit tomorrow.** Not doing it today? Push it to tomorrow and it moves off today's list. It comes back the next day with 10 extra points, because you made a commitment, and another 10 for every further push, so repeated delays get harder to ignore. Commitments are saved in your browser.
 - **Drafts replies with Claude.** Short, British English, no invented facts: anything specific is left as a `[placeholder]` for you to fill in.
 
 ## How the score works
@@ -29,6 +30,7 @@ Out of 100. All weights live in [`lib/scoring.ts`](lib/scoring.ts).
 | Urgency, judged by Claude: none / question / deadline / blocking or today | 0 / 6 / 14 / 30 |
 | Meeting with sender within 24h / 3 days / 7 days | 20 / 12 / 5 |
 | You're only CC'd | -8 |
+| Pushed with Hit tomorrow, per push | +10 |
 
 Time waiting counts half for cold emails with nothing urgent in them, so old sales pitches sink rather than rise.
 
@@ -46,7 +48,8 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 
 - **Slack:** clean API, DMs and mentions fit the same "waiting on you" model.
 - **WhatsApp:** deliberately left out of v1. There's no official API for personal accounts, and the unofficial libraries that scrape WhatsApp Web break its terms and risk a ban. Options are the WhatsApp Business Cloud API for a business number, or an aggregator.
-- **Snooze and done**, so items you've decided to ignore stop appearing.
+- **Dismiss**, for items you've decided not to answer at all.
+- **Sync commitments across devices** (currently saved per browser).
 - **Morning digest** by email at 8am.
 
 ## Run it locally

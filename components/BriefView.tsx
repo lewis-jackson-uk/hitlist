@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { COMMITMENT_BONUS, applyCommitments, bringBack, commitToTomorrow, prune, type Commitments } from "@/lib/commitments";
 import type { Brief, RankedItem } from "@/lib/types";
 import { WEIGHTS, humanDuration } from "@/lib/scoring";
 
@@ -38,7 +39,7 @@ function whenLabel(iso: string, now: Date): string {
   return `${fmt({ weekday: "short" })} ${time}`;
 }
 
-function Row({ r, now, defaultOpen }: { r: RankedItem; now: Date; defaultOpen: boolean }) {
+function Row({ r, now, defaultOpen, onHitTomorrow }: { r: RankedItem; now: Date; defaultOpen: boolean; onHitTomorrow: () => void }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
   const h = heat(r.score);
@@ -91,6 +92,9 @@ function Row({ r, now, defaultOpen }: { r: RankedItem; now: Date; defaultOpen: b
                   Open in Gmail
                 </a>
               )}
+              <button className="btn ghost" onClick={onHitTomorrow}>
+                Hit tomorrow
+              </button>
             </div>
           </div>
         )}
@@ -99,8 +103,41 @@ function Row({ r, now, defaultOpen }: { r: RankedItem; now: Date; defaultOpen: b
   );
 }
 
-export function BriefView({ brief }: { brief: Brief }) {
+/**
+ * Commitments live in this browser only (HitList has no database).
+ * Kept per account so a demo visit never mixes with your real inbox.
+ */
+function useCommitments(brief: Brief, seed: Commitments) {
+  const key = `hitlist:commitments:${brief.mode}:${brief.account ?? ""}`;
+  const [all, setAll] = useState<Commitments>(seed);
+
+  useEffect(() => {
+    let stored: Commitments = {};
+    try {
+      stored = JSON.parse(localStorage.getItem(key) ?? "{}");
+    } catch {
+      /* storage unavailable or corrupted; start fresh */
+    }
+    setAll(prune({ ...seed, ...stored }, brief.ranked.map((r) => r.item.id)));
+    // seed is static per page load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, brief.ranked]);
+
+  function update(next: Commitments) {
+    setAll(next);
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      /* private browsing: still works for this visit */
+    }
+  }
+  return [all, update] as const;
+}
+
+export function BriefView({ brief, seed = {} }: { brief: Brief; seed?: Commitments }) {
   const now = new Date(brief.generatedAt);
+  const [commitments, setCommitments] = useCommitments(brief, seed);
+  const { today, later } = applyCommitments(brief.ranked, commitments, now);
   return (
     <>
       {brief.prep.length > 0 && (
@@ -123,21 +160,53 @@ export function BriefView({ brief }: { brief: Brief }) {
 
       <section className="section" aria-labelledby="list-h">
         <h2 id="list-h">
-          {brief.ranked.length} {brief.ranked.length === 1 ? "person is" : "people are"} waiting on you
+          {today.length} {today.length === 1 ? "person is" : "people are"} waiting on you
         </h2>
         <p className="section-sub">
           Highest priority first. Open any line for the message and a {brief.usedClaude || brief.mode === "demo" ? "reply drafted by Claude" : "link to the thread"}.
         </p>
-        {brief.ranked.length === 0 ? (
-          <div className="empty">Inbox clear. Nobody in the last two weeks is waiting on a reply from you.</div>
+        {today.length === 0 ? (
+          <div className="empty">
+            {later.length > 0
+              ? "Nothing left for today. Everything else is on tomorrow's list."
+              : "Inbox clear. Nobody in the last two weeks is waiting on a reply from you."}
+          </div>
         ) : (
           <ol className="list">
-            {brief.ranked.map((r, i) => (
-              <Row key={r.item.id} r={r} now={now} defaultOpen={i === 0} />
+            {today.map((r, i) => (
+              <Row
+                key={r.item.id}
+                r={r}
+                now={now}
+                defaultOpen={i === 0}
+                onHitTomorrow={() => setCommitments(commitToTomorrow(commitments, r.item.id, now))}
+              />
             ))}
           </ol>
         )}
       </section>
+
+      {later.length > 0 && (
+        <section className="section" aria-labelledby="later-h">
+          <h2 id="later-h">Hitting tomorrow</h2>
+          <p className="section-sub">
+            Each one comes back tomorrow with 10 extra points for every time you&apos;ve pushed it.
+          </p>
+          <ul className="later">
+            {later.map((r) => (
+              <li key={r.item.id}>
+                <span>
+                  <span className="who">{r.item.from.name}</span>
+                  <span className="subject">{r.item.subject}</span>
+                </span>
+                <button className="btn ghost" onClick={() => setCommitments(bringBack(commitments, r.item.id, now))}>
+                  Move back to today
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <details className="how">
         <summary>How the ranking works</summary>
@@ -153,6 +222,7 @@ export function BriefView({ brief }: { brief: Brief }) {
             <tr><td>Urgency in the message, judged by Claude: none, a question, a deadline, blocking or due today</td><td>{WEIGHTS.urgency.join(" / ")}</td></tr>
             <tr><td>You are meeting the sender within 24 hours, 3 days or 7 days</td><td>{WEIGHTS.meeting.within24h} / {WEIGHTS.meeting.within72h} / {WEIGHTS.meeting.within7d}</td></tr>
             <tr><td>You are only CC&apos;d</td><td>{WEIGHTS.ccPenalty}</td></tr>
+            <tr><td>You pushed it to today with Hit tomorrow, per push</td><td>+{COMMITMENT_BONUS}</td></tr>
           </tbody>
         </table>
         <p>
