@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 
-/** Read-only scopes. Owed never sends, deletes or modifies anything in your account. */
+/** Read-only scopes. HitList never sends, deletes or modifies anything in your account. */
 export const SCOPES = [
   "openid",
   "email",

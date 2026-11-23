@@ -1,7 +1,7 @@
 import type { Meeting, WaitingItem } from "./types";
 
 /**
- * A realistic founder inbox for the public demo, so reviewers can see Owed work
+ * A realistic founder inbox for the public demo, so reviewers can see HitList work
  * without connecting an account. All people and companies are fictional.
  * Times are relative to "now", so the demo always looks current.
  * Urgency reasons and drafts here were written by Claude using the same prompt as live mode.

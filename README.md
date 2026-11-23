@@ -1,14 +1,14 @@
-# Owed
+# HitList
 
-**Who's waiting on you, ranked.**
+**Who you need to hit up next.**
 
-Owed reads your Gmail and Google Calendar and produces one list: every conversation where someone is waiting on a reply from you, ordered by who they are, how long they've waited, what they're asking for, and whether you're about to see them. Claude reads the top of the list to judge urgency from what each message actually says, and drafts a reply you can copy. Nothing is ever sent for you.
+HitList reads your Gmail and Google Calendar and produces one list: every conversation where someone is waiting on a reply from you, ordered by who they are, how long they've waited, what they're asking for, and whether you're about to see them. Claude reads the top of the list to judge urgency from what each message actually says, and drafts a reply you can copy. Nothing is ever sent for you.
 
 Built in a day with Claude Code, to answer a simple question every founder has at 8am: *who am I letting down right now?*
 
 ## Why
 
-Inboxes sort by time. Founders need to sort by consequence. A board member who emailed three days ago and who you're seeing on Thursday matters more than a sales pitch from this morning, but Gmail shows them the other way round. The information needed to rank properly is already split across your inbox and your calendar; Owed joins it up.
+Inboxes sort by time. Founders need to sort by consequence. A board member who emailed three days ago and who you're seeing on Thursday matters more than a sales pitch from this morning, but Gmail shows them the other way round. The information needed to rank properly is already split across your inbox and your calendar; HitList joins it up.
 
 ## What it does
 
@@ -36,7 +36,7 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 
 ## Design decisions
 
-- **Read-only.** Scopes are `gmail.readonly` and `calendar.readonly`. Owed can't send, delete or change anything.
+- **Read-only.** Scopes are `gmail.readonly` and `calendar.readonly`. HitList can't send, delete or change anything.
 - **No database.** OAuth tokens live in an encrypted, httpOnly cookie. Email content is fetched, ranked and discarded on each request.
 - **Human in the loop.** Claude drafts; you send. Email content is treated as untrusted input in the prompt, and Claude has no tool that acts on your account.
 - **Graceful without Claude.** With no API key, urgency falls back to rules (deadlines, "today", decisions, questions) and the app still works.

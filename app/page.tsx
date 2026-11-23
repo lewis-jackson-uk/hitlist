@@ -29,10 +29,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   return (
     <main className="page">
       <header className="mast">
-        <h1 className="wordmark">Owed</h1>
+        <h1 className="wordmark">HitList</h1>
         <p className="lede">
-          Every email someone is waiting on you to answer, ranked by <strong>who</strong> is waiting,{" "}
-          <strong>how long</strong>, and whether you&apos;re <strong>about to see them</strong>.
+          <strong>Who you need to hit up next.</strong> Every email you owe a reply, ranked by who&apos;s waiting, how
+          long, and whether you&apos;re about to see them.
         </p>
         <div className="modes">
           {googleConfigured() ? (

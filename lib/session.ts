@@ -1,7 +1,7 @@
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 
-export interface OwedSession {
+export interface HitListSession {
   email?: string;
   /** OAuth CSRF state, set during login */
   oauthState?: string;
@@ -19,7 +19,7 @@ function options(): SessionOptions {
   }
   return {
     password,
-    cookieName: "owed_session",
+    cookieName: "hitlist_session",
     cookieOptions: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
@@ -29,7 +29,7 @@ function options(): SessionOptions {
   };
 }
 
-/** Tokens live only in an encrypted, httpOnly cookie. Owed has no database and stores no email content. */
+/** Tokens live only in an encrypted, httpOnly cookie. HitList has no database and stores no email content. */
 export async function getSession() {
-  return getIronSession<OwedSession>(await cookies(), options());
+  return getIronSession<HitListSession>(await cookies(), options());
 }

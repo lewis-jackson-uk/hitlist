@@ -29,7 +29,7 @@ export default function Live() {
   return (
     <main className="page">
       <header className="mast">
-        <h1 className="wordmark">Owed</h1>
+        <h1 className="wordmark">HitList</h1>
         <div className="modes">
           {state.kind === "ready" && (
             <>

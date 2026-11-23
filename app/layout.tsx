@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Owed: who's waiting on you",
+  title: "HitList: who you need to hit up next",
   description: "A founder's priority list. Every email you owe a reply, ranked by who is waiting, how long, and whether you are about to see them.",
 };
 
