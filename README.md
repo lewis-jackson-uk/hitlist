@@ -2,7 +2,7 @@
 
 **Who you need to hit up next.**
 
-HitList reads your Gmail and Google Calendar and produces one list: every conversation where someone is waiting on a reply from you, ordered by who they are, how long they've waited, what they're asking for, and whether you're about to see them. Claude reads the top of the list to judge urgency from what each message actually says, and drafts a reply you can copy. Nothing is ever sent for you.
+HitList reads your Gmail, Slack and Google Calendar and produces one list: every conversation where someone is waiting on a reply from you, ordered by who they are, how long they've waited, what they're asking for, and whether you're about to see them. Claude reads the top of the list to judge urgency from what each message actually says, and drafts a reply you can copy. Nothing is ever sent for you.
 
 Built in a day with Claude Code, to answer a simple question every founder has at 8am: *who am I letting down right now?*
 
@@ -13,6 +13,7 @@ Inboxes sort by time. Founders need to sort by consequence. A board member who e
 ## What it does
 
 - **Finds what you owe.** Every inbox thread from the last 14 days where the latest message is from a real person, not you. Newsletters, receipts, notifications and anything with an unsubscribe header are filtered out.
+- **Includes Slack.** DMs and group DMs where someone spoke after you, and @mentions in channels you haven't replied to. Slack profiles carry email addresses, so the calendar boost works across channels: a Slack DM from someone you're meeting tomorrow ranks like an email from them would. Claude drafts Slack replies short and chat-style.
 - **Cross-references your calendar.** If you're meeting someone soon and they have an unanswered email, that thread jumps up the list. This is the part a reminder app can't do.
 - **Flags meetings that need prep.** Anything in the next 48 hours with no agenda, or with attendees still waiting on you.
 - **Explains every score.** Each point awarded comes with a reason ("Key contact, Board pack due Tuesday, Meeting Thursday 14:00"). The ranking is never a black box.
@@ -39,7 +40,7 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 
 ## Design decisions
 
-- **Read-only.** Scopes are `gmail.readonly` and `calendar.readonly`. HitList can't send, delete or change anything.
+- **Read-only.** Scopes are `gmail.readonly` and `calendar.readonly`, and Slack uses read-only user scopes with no bot. HitList can't send, post, delete or change anything. Disconnecting Slack revokes the token at Slack, not just in HitList.
 - **No database.** OAuth tokens live in an encrypted, httpOnly cookie. Email content is fetched, ranked and discarded on each request.
 - **Human in the loop.** Claude drafts; you send. Email content is treated as untrusted input in the prompt, and Claude has no tool that acts on your account.
 - **Graceful without Claude.** With no API key, urgency falls back to rules (deadlines, "today", decisions, questions) and the app still works.
@@ -47,7 +48,6 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 
 ## Roadmap
 
-- **Slack:** clean API, DMs and mentions fit the same "waiting on you" model.
 - **WhatsApp:** deliberately left out of v1. There's no official API for personal accounts, and the unofficial libraries that scrape WhatsApp Web break its terms and risk a ban. Options are the WhatsApp Business Cloud API for a business number, or an aggregator.
 - **Dismiss**, for items you've decided not to answer at all.
 - **Sync commitments and delegations across devices** (currently saved per browser).
@@ -71,6 +71,19 @@ The demo works with no configuration at all. To connect your own Gmail:
 4. **Credentials > Create credentials > OAuth client ID:** type Web application. Add `http://localhost:3000/api/auth/callback` as an authorised redirect URI (and your Vercel URL's equivalent once deployed).
 5. Put the client ID and secret in `.env.local`, set `SESSION_SECRET` (`openssl rand -base64 32`), and optionally `ANTHROPIC_API_KEY` and `KEY_CONTACTS`.
 
+### Add Slack (optional, about 10 minutes)
+
+Slack is added after Gmail. Slack requires HTTPS for sign-in, so do this against your deployed Vercel URL.
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) > **Create New App** > From scratch. Pick your own workspace.
+2. **OAuth & Permissions:**
+   - Add the redirect URL `https://<your-app>.vercel.app/api/slack/callback`.
+   - Under **User Token Scopes** (not Bot), add: `im:read`, `im:history`, `mpim:read`, `mpim:history`, `channels:history`, `groups:history`, `users:read`, `users:read.email`, `search:read`.
+3. **Basic Information:** copy the Client ID and Client Secret into Vercel as `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET`, set `SLACK_REDIRECT_URI` to the URL above, and redeploy.
+4. Open `/live` and click **Connect Slack**.
+
+Because the app is built for and installed in your own workspace, it keeps Slack's normal rate limits. Slack's 2025 limits on message history apply to apps distributed to other workspaces outside the Slack Marketplace, so a multi-workspace version would need Marketplace approval or a cache.
+
 ## Deploy (free)
 
 1. Push this repo to GitHub.
@@ -80,7 +93,7 @@ The demo works with no configuration at all. To connect your own Gmail:
 
 ## Stack
 
-Next.js 15 (App Router), TypeScript, Google APIs, Anthropic SDK (Claude, tool use for structured output), iron-session, Vitest.
+Next.js 15 (App Router), TypeScript, Google APIs, Slack Web API, Anthropic SDK (Claude, tool use for structured output), iron-session, Vitest.
 
 ## Build log
 

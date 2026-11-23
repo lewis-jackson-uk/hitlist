@@ -33,6 +33,8 @@ export interface WaitingItem {
   isDirect: boolean;
   urgency?: Urgency;
   draft?: string;
+  /** Where in the channel, e.g. "#product" or "Group DM". Used for Slack. */
+  location?: string;
 }
 
 export interface Meeting {
@@ -69,4 +71,8 @@ export interface Brief {
   ranked: RankedItem[];
   prep: PrepFlag[];
   usedClaude: boolean;
+  /** Which sources this brief covers, and whether Slack can be connected on this deployment */
+  sources?: { gmail: boolean; slack: boolean; slackAvailable: boolean };
+  /** Non-fatal problems, e.g. one source failed but the rest worked */
+  warnings?: string[];
 }

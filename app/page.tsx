@@ -26,6 +26,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
     now,
     useClaude: false, // demo drafts are pre-generated so visitors never cost API credit
   });
+  brief.sources = { gmail: true, slack: true, slackAvailable: false };
 
   return (
     <main className="page">
@@ -39,7 +40,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           {googleConfigured() ? (
             <Link className="btn" href="/api/auth/login" prefetch={false}>Connect Gmail</Link>
           ) : null}
-          <span className="note">You&apos;re looking at a sample founder&apos;s inbox.</span>
+          <span className="note">You&apos;re looking at a sample founder&apos;s email and Slack.</span>
         </div>
       </header>
       {error && ERRORS[error] && <p className="banner error">{ERRORS[error]}</p>}

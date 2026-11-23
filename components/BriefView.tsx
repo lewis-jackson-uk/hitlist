@@ -157,6 +157,7 @@ function Row({
           <span className="score" aria-label={`Priority ${r.score} out of 100`}>{r.score}</span>
           <span>
             <span className="who">{r.item.from.name}</span>
+            <span className="via">{r.item.channel === "slack" ? "Slack" : "Email"}</span>
             <span className="subject">{r.item.subject}</span>
             {reasons.length > 0 && <span className="reasons">{reasons.join(", ")}</span>}
           </span>
@@ -179,7 +180,7 @@ function Row({
               )}
               {r.item.url && (
                 <a className="btn ghost" href={r.item.url} target="_blank" rel="noreferrer">
-                  Open in Gmail
+                  {r.item.channel === "slack" ? "Open in Slack" : "Open in Gmail"}
                 </a>
               )}
               <button className="btn ghost" onClick={onHitTomorrow}>
@@ -294,6 +295,9 @@ export function BriefView({
         <h2 id="list-h">
           {today.length} {today.length === 1 ? "person is" : "people are"} waiting on you
         </h2>
+        {brief.warnings?.map((w) => (
+          <p className="banner error" key={w}>{w}</p>
+        ))}
         <p className="section-sub">
           Highest priority first. Open any line for the message and a {brief.usedClaude || brief.mode === "demo" ? "reply drafted by Claude" : "link to the thread"}.
         </p>

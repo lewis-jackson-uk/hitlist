@@ -105,12 +105,14 @@ export function handoverBody(item: WaitingItem, note: string): string {
     `Could you pick this up for me?${note.trim() ? ` ${note.trim()}` : ""}`,
     "",
     `From: ${item.from.name} <${item.from.email}>`,
-    `Subject: ${item.subject}`,
+    ...(item.channel === "slack" ? [`Where: Slack, ${item.location ?? "DM"}`] : [`Subject: ${item.subject}`]),
     `Received: ${received}`,
     "",
     `"${item.snippet}"`,
     "",
-    `Please reply to ${item.from.name.split(" ")[0]} directly and copy me in. Let me know if you need the full thread.`,
+    item.channel === "slack"
+      ? `Please reply to ${item.from.name.split(" ")[0]} in Slack and tag me. Let me know if you need more context.`
+      : `Please reply to ${item.from.name.split(" ")[0]} directly and copy me in. Let me know if you need the full thread.`,
     "",
     "Thanks",
   ].join("\n");
@@ -125,7 +127,7 @@ export function handoverUrl(item: WaitingItem, to: string, note: string, account
     view: "cm",
     fs: "1",
     to: to.trim(),
-    su: `Can you take this? ${item.subject}`,
+    su: `Can you take this? ${item.channel === "slack" ? `Slack from ${item.from.name}` : item.subject}`,
     body: handoverBody(item, note),
   });
   if (account) params.set("authuser", account);

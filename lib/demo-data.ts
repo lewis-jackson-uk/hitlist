@@ -1,7 +1,7 @@
 import type { Meeting, WaitingItem } from "./types";
 
 /**
- * A realistic founder inbox for the public demo, so reviewers can see HitList work
+ * A realistic founder inbox and Slack for the public demo, so reviewers can see HitList work
  * without connecting an account. All people and companies are fictional.
  * Times are relative to "now", so the demo always looks current.
  * Urgency reasons and drafts here were written by Claude using the same prompt as live mode.
@@ -81,18 +81,33 @@ export function demoData(now: Date): { items: WaitingItem[]; meetings: Meeting[]
     },
     {
       id: "d-staging",
-      channel: "gmail",
+      channel: "slack",
       from: marta,
-      subject: "Staging is down after the deploy",
+      subject: "Migration failed halfway on staging. I can roll back or push a fix…",
+      location: "DM",
       snippet:
-        "The migration failed halfway on staging. I can roll back or push a fix, but I need you to decide which before I touch prod. Which do you prefer?",
+        "Migration failed halfway on staging. I can roll back or push a fix, but need you to pick before I touch prod. Which do you want?",
       lastMessageAt: ago(now, 3),
       messageCount: 2,
       knownContact: true,
       isDirect: true,
       urgency: { level: 3, reason: "Developer blocked until you choose", source: "claude" },
-      draft:
-        "Thanks Marta. Roll back first so staging is stable, then push the fix once you've tested it locally. Hold off on prod until we've talked it through at the check-in this afternoon.",
+      draft: "Roll back first so staging is stable, then push the fix once it's tested. Hold prod until our check-in this afternoon.",
+    },
+    {
+      id: "d-launch",
+      channel: "slack",
+      from: { name: "Sam Patel", email: "sam@yourstartup.co" },
+      subject: "Mentioned you in #product",
+      location: "#product",
+      snippet:
+        "@you onboarding copy is ready. Do we ship it now or wait for Priya's feedback from the pilot? Need your call before I merge.",
+      lastMessageAt: ago(now, 5),
+      messageCount: 1,
+      knownContact: true,
+      isDirect: true,
+      urgency: { level: 3, reason: "Release blocked on your call", source: "claude" },
+      draft: "Ship it now. If Priya has edits after the pilot review we'll fold them into the next release.",
     },
     {
       id: "d-board",

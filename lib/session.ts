@@ -10,6 +10,15 @@ export interface HitListSession {
     refresh_token?: string | null;
     expiry_date?: number | null;
   };
+  /** OAuth CSRF state for the Slack connection */
+  slackState?: string;
+  slack?: {
+    token: string;
+    userId: string;
+    teamId: string;
+    teamName?: string;
+    teamUrl: string;
+  };
 }
 
 function options(): SessionOptions {

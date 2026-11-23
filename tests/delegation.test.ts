@@ -90,3 +90,13 @@ describe("handover email", () => {
     expect(isValidEmail("sam@team")).toBe(false);
   });
 });
+
+describe("handover for Slack items", () => {
+  it("says where in Slack it came from and asks for a reply there", () => {
+    const item = { ...ranked("s").item, channel: "slack" as const, location: "#product", from: { name: "Sam Patel", email: "sam@x.co" } };
+    const body = handoverBody(item, "");
+    expect(body).toContain("Where: Slack, #product");
+    expect(body).toContain("Please reply to Sam in Slack and tag me.");
+    expect(new URL(handoverUrl(item, "a@b.co", "")).searchParams.get("su")).toBe("Can you take this? Slack from Sam Patel");
+  });
+});

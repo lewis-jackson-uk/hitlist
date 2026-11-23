@@ -4,6 +4,8 @@ import { oauthClient } from "@/lib/google";
 import { getSession } from "@/lib/session";
 import { fetchMeetings } from "@/lib/sources/calendar";
 import { fetchWaitingEmails } from "@/lib/sources/gmail";
+import { SlackError, fetchWaitingSlack, slackClient, slackConfigured } from "@/lib/sources/slack";
+import type { WaitingItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,19 +25,43 @@ export async function GET() {
     refreshed = true;
   });
 
+  const warnings: string[] = [];
+  let sessionChanged = false;
+
+  // Slack is an add-on: if it fails, you still get your email and calendar.
+  async function slackItems(): Promise<WaitingItem[]> {
+    if (!session.slack) return [];
+    try {
+      return await fetchWaitingSlack(slackClient(session.slack.token), session.slack);
+    } catch (err) {
+      if (err instanceof SlackError && ["invalid_auth", "token_revoked", "account_inactive"].includes(err.code)) {
+        session.slack = undefined;
+        sessionChanged = true;
+        warnings.push("Slack was disconnected. Connect it again to include Slack messages.");
+      } else {
+        console.error("Slack failed:", err);
+        warnings.push("Couldn't read Slack this time, so this list is email only. Try refreshing.");
+      }
+      return [];
+    }
+  }
+
   try {
-    const [items, meetings] = await Promise.all([
+    const [emails, slack, meetings] = await Promise.all([
       fetchWaitingEmails(auth, session.email),
+      slackItems(),
       fetchMeetings(auth, session.email),
     ]);
     const brief = await buildBrief({
-      items,
+      items: [...emails, ...slack],
       meetings,
       keyContacts: keyContactsFromEnv(),
       mode: "live",
       account: session.email,
     });
-    if (refreshed) await session.save();
+    brief.sources = { gmail: true, slack: Boolean(session.slack), slackAvailable: slackConfigured() };
+    brief.warnings = warnings;
+    if (refreshed || sessionChanged) await session.save();
     return NextResponse.json(brief);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
