@@ -241,3 +241,65 @@ export function demoData(now: Date): { items: WaitingItem[]; meetings: Meeting[]
 
   return { items, meetings };
 }
+
+/** Emails "you" sent that got no reply, for the Waiting on them list. */
+export function demoSent(now: Date): WaitingItem[] {
+  return [
+    {
+      id: "fu-halcyon",
+      channel: "gmail",
+      from: { name: "Ben Ashworth", email: "ben@halcyonhotels.co.uk" },
+      subject: "Proposal: rolling out to all 12 sites",
+      snippet:
+        "Attached is the proposal for the full rollout. Could you confirm which sites you'd want in phase two, and whether the per-site price works for your finance team?",
+      lastMessageAt: ago(now, 98),
+      messageCount: 3,
+      knownContact: true,
+      isDirect: true,
+      urgency: { level: 3, reason: "Pricing sign-off blocks the full rollout", source: "claude" },
+      draft:
+        "Hi Ben, I know the pilot review is tomorrow, so happy to pick up the rollout proposal there if easier. The main thing I need is which sites you'd want in phase two and whether the per-site price works for finance.",
+    },
+    {
+      id: "fu-westbridge",
+      channel: "gmail",
+      from: { name: "Ravi Mehta", email: "ravi.mehta@westbridgegroup.co.uk" },
+      subject: "Pilot for Westbridge pubs",
+      snippet:
+        "Great to meet at the Hospitality Show. Would you be open to a 30-minute call next week to see if a pilot fits your spring hiring?",
+      lastMessageAt: ago(now, 196),
+      messageCount: 1,
+      knownContact: false,
+      isDirect: true,
+      urgency: { level: 2, reason: "Prospect with a spring hiring push", source: "claude" },
+      draft:
+        "Hi Ravi, following up on my note after the Hospitality Show. If spring hiring is on your radar, I could do [two time options] for a quick call. If the timing's wrong, no problem, just let me know.",
+    },
+    {
+      id: "fu-reference",
+      channel: "gmail",
+      from: { name: "Rachel Moore", email: "rachel.moore@brightsidehotels.com" },
+      subject: "Reference for Hannah Okafor",
+      snippet: "Hannah has given your name as a referee. Would you be able to share a quick reference by Friday?",
+      lastMessageAt: ago(now, 74),
+      messageCount: 1,
+      knownContact: false,
+      isDirect: true,
+      urgency: { level: 2, reason: "Hiring decision is waiting on it", source: "claude" },
+      draft:
+        "Hi Rachel, sorry to chase. We're hoping to make a decision on Hannah this week, so a few lines on her time with you by Friday would really help. A 10-minute call works too if that's easier.",
+    },
+    {
+      // No ask in it, so it never shows: proves the filter works.
+      id: "fu-drinks",
+      channel: "gmail",
+      from: { name: "Jamie Clarke", email: "jamie.clarke@gmail.com" },
+      subject: "Re: Drinks Thursday",
+      snippet: "Brilliant, see you there.",
+      lastMessageAt: ago(now, 72),
+      messageCount: 4,
+      knownContact: true,
+      isDirect: true,
+    },
+  ];
+}

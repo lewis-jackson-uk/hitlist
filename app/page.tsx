@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BriefView } from "@/components/BriefView";
 import { Footer } from "@/components/Footer";
 import { buildBrief } from "@/lib/brief";
-import { DEMO_ACCOUNT, DEMO_KEY_CONTACTS, demoData } from "@/lib/demo-data";
+import { DEMO_ACCOUNT, DEMO_KEY_CONTACTS, demoData, demoSent } from "@/lib/demo-data";
 import { googleConfigured } from "@/lib/google";
 import { londonDayKey } from "@/lib/commitments";
 
@@ -19,6 +19,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   const { items, meetings } = demoData(now);
   const brief = await buildBrief({
     items,
+    sent: demoSent(now),
     meetings,
     keyContacts: DEMO_KEY_CONTACTS,
     mode: "demo",

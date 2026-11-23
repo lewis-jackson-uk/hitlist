@@ -4,6 +4,7 @@ import { oauthClient } from "@/lib/google";
 import { getSession } from "@/lib/session";
 import { fetchMeetings } from "@/lib/sources/calendar";
 import { fetchWaitingEmails } from "@/lib/sources/gmail";
+import { fetchAwaitingReplies } from "@/lib/sources/gmail-sent";
 import { SlackError, fetchWaitingSlack, slackClient, slackConfigured } from "@/lib/sources/slack";
 import type { WaitingItem } from "@/lib/types";
 
@@ -47,13 +48,19 @@ export async function GET() {
   }
 
   try {
-    const [emails, slack, meetings] = await Promise.all([
+    const [emails, slack, sent, meetings] = await Promise.all([
       fetchWaitingEmails(auth, session.email),
       slackItems(),
+      fetchAwaitingReplies(auth, session.email).catch((err) => {
+        console.error("Sent mail failed:", err);
+        warnings.push("Couldn't check your sent mail this time, so Waiting on them is empty. Try refreshing.");
+        return [];
+      }),
       fetchMeetings(auth, session.email),
     ]);
     const brief = await buildBrief({
       items: [...emails, ...slack],
+      sent,
       meetings,
       keyContacts: keyContactsFromEnv(),
       mode: "live",

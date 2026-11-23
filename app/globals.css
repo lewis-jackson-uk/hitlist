@@ -163,3 +163,8 @@ details.how summary { cursor: pointer; font-weight: 600; font-size: 17px; }
 }
 
 .via { margin-left: 8px; font-size: 13px; color: var(--muted); }
+
+.you-wrote { font-weight: 600; color: var(--ink); }
+details.cleared { margin-bottom: 40px; }
+details.cleared summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+details.cleared .section-sub { margin-top: 10px; }

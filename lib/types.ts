@@ -69,6 +69,8 @@ export interface Brief {
   mode: "demo" | "live";
   account?: string;
   ranked: RankedItem[];
+  /** Emails you sent that are still waiting on a reply, with a nudge to send */
+  followUps?: RankedItem[];
   prep: PrepFlag[];
   usedClaude: boolean;
   /** Which sources this brief covers, and whether Slack can be connected on this deployment */

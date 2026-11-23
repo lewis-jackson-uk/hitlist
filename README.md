@@ -17,6 +17,8 @@ Inboxes sort by time. Founders need to sort by consequence. A board member who e
 - **Cross-references your calendar.** If you're meeting someone soon and they have an unanswered email, that thread jumps up the list. This is the part a reminder app can't do.
 - **Flags meetings that need prep.** Anything in the next 48 hours with no agenda, or with attendees still waiting on you.
 - **Explains every score.** Each point awarded comes with a reason ("Key contact, Board pack due Tuesday, Meeting Thursday 14:00"). The ranking is never a black box.
+- **Waiting on them.** The reverse list: emails you sent that still have no reply after two days. Claude decides which ones actually need chasing ("thanks, see you then" doesn't) and drafts a nudge that's specific rather than "just checking in". If you're meeting them soon, it suggests raising it there instead. Without Claude, only emails where you asked a question or made a request are kept.
+- **No reply needed.** One click clears a "thanks!" or an FYI. If they write again, it comes straight back. Cleared items can be restored.
 - **Hit tomorrow.** Not doing it today? Push it to tomorrow and it moves off today's list. It comes back the next day with 10 extra points, because you made a commitment, and another 10 for every further push, so repeated delays get harder to ignore. Commitments are saved in your browser.
 - **Delegate.** Hand an item to a colleague: HitList opens a Gmail draft to them with the sender, subject, message and your note, asking them to reply directly and copy you in. Because the handover is an ordinary email, it lands on *their* HitList automatically, with no shared database needed. On your side the item moves to a Delegated section and comes back after 2 days with "check it's handled". Mark handled clears it; if the sender writes again, it comes straight back.
 - **Drafts replies with Claude.** Short, British English, no invented facts: anything specific is left as a `[placeholder]` for you to fill in.
@@ -34,6 +36,8 @@ Out of 100. All weights live in [`lib/scoring.ts`](lib/scoring.ts).
 | You're only CC'd | -8 |
 | Pushed with Hit tomorrow, per push | +10 |
 
+**Waiting on them** uses the same idea in reverse: silence (15 / 25 / 30 for under 4 days, under 7, over 7), who they are (key 25, known 12, new 8), how much it matters as judged by Claude (0 / 8 / 16 / 25), and +10 if you're seeing them within a week.
+
 Time waiting counts half for cold emails with nothing urgent in them, so old sales pitches sink rather than rise.
 
 The pipeline runs in two passes: rank everything with cheap rules, send only the top 15 to Claude in one batched call, then re-rank with Claude's urgency. This keeps a live run to pennies.
@@ -49,7 +53,7 @@ The pipeline runs in two passes: rank everything with cheap rules, send only the
 ## Roadmap
 
 - **WhatsApp:** deliberately left out of v1. There's no official API for personal accounts, and the unofficial libraries that scrape WhatsApp Web break its terms and risk a ban. Options are the WhatsApp Business Cloud API for a business number, or an aggregator.
-- **Dismiss**, for items you've decided not to answer at all.
+- **Waiting on them for Slack**, for messages you sent that went unanswered.
 - **Sync commitments and delegations across devices** (currently saved per browser).
 - **True forwarding** with the full thread and attachments, which needs Gmail's compose permission rather than read-only.
 - **Morning digest** by email at 8am.

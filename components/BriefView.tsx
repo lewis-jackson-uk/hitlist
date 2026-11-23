@@ -13,6 +13,7 @@ import {
   takeBack,
   type Delegations,
 } from "@/lib/delegation";
+import { applyDismissals, dismiss, pruneDismissals, restore, type Dismissals } from "@/lib/dismiss";
 import type { Brief, RankedItem } from "@/lib/types";
 import { WEIGHTS, humanDuration } from "@/lib/scoring";
 
@@ -117,17 +118,22 @@ function Row({
   now,
   defaultOpen,
   account,
-  recentDelegates,
+  recentDelegates = [],
+  kind = "owed",
   onHitTomorrow,
   onDelegate,
+  onDismiss,
 }: {
   r: RankedItem;
   now: Date;
   defaultOpen: boolean;
   account?: string;
-  recentDelegates: string[];
-  onHitTomorrow: () => void;
-  onDelegate: (to: string, note: string) => void;
+  recentDelegates?: string[];
+  /** "owed": you owe them a reply. "awaiting": you're waiting on them. */
+  kind?: "owed" | "awaiting";
+  onHitTomorrow?: () => void;
+  onDelegate?: (to: string, note: string) => void;
+  onDismiss: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -165,17 +171,22 @@ function Row({
         </button>
         {open && (
           <div className="detail" id={id}>
-            {r.item.snippet && <p className="quote">{r.item.snippet}</p>}
+            {r.item.snippet && (
+              <p className="quote">
+                {kind === "awaiting" && <span className="you-wrote">You wrote: </span>}
+                {r.item.snippet}
+              </p>
+            )}
             {r.item.draft ? (
               <div>
-                <p className="draft-label">Suggested reply</p>
+                <p className="draft-label">{kind === "awaiting" ? "Suggested nudge" : "Suggested reply"}</p>
                 <p className="draft">{r.item.draft}</p>
               </div>
             ) : null}
             <div className="actions">
               {r.item.draft && (
                 <button className="btn" onClick={copy}>
-                  {copied ? "Copied" : "Copy reply"}
+                  {copied ? "Copied" : kind === "awaiting" ? "Copy nudge" : "Copy reply"}
                 </button>
               )}
               {r.item.url && (
@@ -183,16 +194,21 @@ function Row({
                   {r.item.channel === "slack" ? "Open in Slack" : "Open in Gmail"}
                 </a>
               )}
-              <button className="btn ghost" onClick={onHitTomorrow}>
-                Hit tomorrow
-              </button>
-              {!delegating && (
+              {onHitTomorrow && (
+                <button className="btn ghost" onClick={onHitTomorrow}>
+                  Hit tomorrow
+                </button>
+              )}
+              {onDelegate && !delegating && (
                 <button className="btn ghost" onClick={() => setDelegating(true)}>
                   Delegate
                 </button>
               )}
+              <button className="btn ghost" onClick={onDismiss}>
+                {kind === "awaiting" ? "Stop chasing" : "No reply needed"}
+              </button>
             </div>
-            {delegating && (
+            {delegating && onDelegate && (
               <DelegateForm
                 r={r}
                 account={account}
@@ -250,6 +266,7 @@ export function BriefView({
 }) {
   const now = new Date(brief.generatedAt);
   const ids = brief.ranked.map((r) => r.item.id);
+  const followUpIds = (brief.followUps ?? []).map((r) => r.item.id);
   const [commitments, setCommitments] = useStored<Commitments>("commitments", brief, seed, (c) => prune(c, ids));
   const [delegations, setDelegations] = useStored<Delegations>("delegations", brief, seedDelegations, (d) =>
     pruneDelegations(d, ids),
@@ -260,10 +277,16 @@ export function BriefView({
     [...new Set(Object.values(seedDelegations).map((d) => d.to))],
     (r) => r.slice(0, 8),
   );
+  const [dismissals, setDismissals] = useStored<Dismissals>("dismissed", brief, {}, (d) =>
+    pruneDismissals(d, [...ids, ...followUpIds]),
+  );
   // Live mode opens drafts in your account; the demo has no real account to point at.
   const account = brief.mode === "live" ? brief.account : undefined;
 
-  const { active, delegated } = applyDelegations(brief.ranked, delegations, now);
+  const { kept, dismissed } = applyDismissals(brief.ranked, dismissals);
+  const { kept: followUps, dismissed: stoppedChasing } = applyDismissals(brief.followUps ?? [], dismissals);
+  const cleared = [...dismissed, ...stoppedChasing];
+  const { active, delegated } = applyDelegations(kept, delegations, now);
   const { today, later } = applyCommitments(active, commitments, now);
 
   function handOver(r: RankedItem, to: string, note: string) {
@@ -319,11 +342,34 @@ export function BriefView({
                 recentDelegates={recent}
                 onHitTomorrow={() => setCommitments(commitToTomorrow(commitments, r.item.id, now))}
                 onDelegate={(to, note) => handOver(r, to, note)}
+                onDismiss={() => setDismissals(dismiss(dismissals, r, now))}
               />
             ))}
           </ol>
         )}
       </section>
+
+      {followUps.length > 0 && (
+        <section className="section" aria-labelledby="awaiting-h">
+          <h2 id="awaiting-h">Waiting on them</h2>
+          <p className="section-sub">
+            Emails you sent that still have no reply after two days, where you asked for something. Open any line for a
+            nudge{brief.usedClaude || brief.mode === "demo" ? " drafted by Claude" : ""}.
+          </p>
+          <ol className="list">
+            {followUps.map((r) => (
+              <Row
+                key={r.item.id}
+                r={r}
+                now={now}
+                defaultOpen={false}
+                kind="awaiting"
+                onDismiss={() => setDismissals(dismiss(dismissals, r, now))}
+              />
+            ))}
+          </ol>
+        </section>
+      )}
 
       {later.length > 0 && (
         <section className="section" aria-labelledby="later-h">
@@ -381,6 +427,26 @@ export function BriefView({
         </section>
       )}
 
+      {cleared.length > 0 && (
+        <details className="cleared">
+          <summary>Cleared ({cleared.length})</summary>
+          <p className="section-sub">Anything here comes back by itself if they write again.</p>
+          <ul className="later">
+            {cleared.map((r) => (
+              <li key={r.item.id}>
+                <span>
+                  <span className="who">{r.item.from.name}</span>
+                  <span className="subject">{r.item.subject}</span>
+                </span>
+                <button className="btn ghost" onClick={() => setDismissals(restore(dismissals, r.item.id))}>
+                  Restore
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       <details className="how">
         <summary>How the ranking works</summary>
         <p>
@@ -401,7 +467,9 @@ export function BriefView({
         <p>
           Time waiting counts half for cold emails with nothing urgent in them, so old sales pitches sink. Newsletters,
           receipts and anything with an unsubscribe link are filtered out before scoring. Delegated items leave the
-          list and come back after {FOLLOW_UP_DAYS} days for a check-in.
+          list and come back after {FOLLOW_UP_DAYS} days for a check-in. Waiting on them is scored the same way in
+          reverse: how long they&apos;ve been silent, who they are, how much it matters, and whether you&apos;ll see
+          them soon.
         </p>
       </details>
     </>
