@@ -3,7 +3,20 @@ import type { RankedItem, Urgency } from "./types";
 import { humanDuration } from "./scoring";
 
 export function claudeConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+}
+
+/** A short, safe explanation of why a Claude call failed, for showing on screen. Never includes the key. */
+export function describeClaudeError(err: unknown): string {
+  const status = (err as { status?: number })?.status;
+  const raw = err instanceof Error ? err.message : String(err);
+  const clean = raw.replace(/sk-ant-[A-Za-z0-9_-]+/g, "[key]").slice(0, 200);
+  if (status === 401) return "the API key was rejected. Check ANTHROPIC_API_KEY is the current key, then redeploy";
+  if (status === 403) return "the key doesn't have permission for this request";
+  if (status === 404) return `the model wasn't found (${process.env.CLAUDE_MODEL || "claude-sonnet-5-5"}). Check CLAUDE_MODEL`;
+  if (status === 429) return "rate or spend limit reached. Check your limits and credit in the Claude Console";
+  if (status === 400 && /credit|balance|billing/i.test(clean)) return "no credit left. Add credit in the Claude Console";
+  return clean;
 }
 
 interface Triage {
@@ -52,7 +65,11 @@ const TOOL: Anthropic.Tool = {
  * message actually says, plus a draft reply. Returns a map keyed by item id.
  * Any failure returns an empty map, and the caller falls back to rule-based scoring.
  */
-export async function triageWithClaude(items: RankedItem[], now: Date): Promise<Map<string, { urgency: Urgency; draft: string }>> {
+export async function triageWithClaude(
+  items: RankedItem[],
+  now: Date,
+  onError?: (reason: string) => void,
+): Promise<Map<string, { urgency: Urgency; draft: string }>> {
   const out = new Map<string, { urgency: Urgency; draft: string }>();
   if (!claudeConfigured() || items.length === 0) return out;
 
@@ -90,6 +107,7 @@ export async function triageWithClaude(items: RankedItem[], now: Date): Promise<
     }
   } catch (err) {
     console.error("Claude triage failed, using rule-based scoring:", err instanceof Error ? err.message : err);
+    onError?.(describeClaudeError(err));
   }
   return out;
 }
@@ -137,6 +155,7 @@ const FOLLOW_UP_TOOL: Anthropic.Tool = {
 export async function triageFollowUpsWithClaude(
   items: RankedItem[],
   now: Date,
+  onError?: (reason: string) => void,
 ): Promise<Map<string, { needsFollowUp: boolean; urgency: Urgency; draft: string }>> {
   const out = new Map<string, { needsFollowUp: boolean; urgency: Urgency; draft: string }>();
   if (!claudeConfigured() || items.length === 0) return out;
@@ -173,6 +192,7 @@ export async function triageFollowUpsWithClaude(
     }
   } catch (err) {
     console.error("Claude follow-up triage failed, using rules:", err instanceof Error ? err.message : err);
+    onError?.(describeClaudeError(err));
   }
   return out;
 }

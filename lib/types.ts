@@ -73,6 +73,8 @@ export interface Brief {
   followUps?: RankedItem[];
   prep: PrepFlag[];
   usedClaude: boolean;
+  /** Whether a Claude key is set, and why Claude didn't run if it failed */
+  claude?: { configured: boolean; error?: string };
   /** Which sources this brief covers, and whether Slack can be connected on this deployment */
   sources?: { gmail: boolean; slack: boolean; slackAvailable: boolean };
   /** Non-fatal problems, e.g. one source failed but the rest worked */

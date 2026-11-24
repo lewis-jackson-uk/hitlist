@@ -15,6 +15,14 @@ const SLACK_MESSAGES: Record<string, string> = {
   failed: "Slack didn't connect. Try again, and check the redirect URL in your Slack app matches this site.",
 };
 
+/** Say plainly whether Claude ran, and if not, why. */
+function claudeStatus(brief: Brief): string {
+  if (brief.usedClaude) return "Urgency and replies by Claude.";
+  if (!brief.claude?.configured) return "Rule-based urgency: no Claude key found. Add ANTHROPIC_API_KEY in Vercel and redeploy.";
+  if (brief.claude.error) return `Rule-based urgency: Claude is set up but the request failed, because ${brief.claude.error}.`;
+  return "Claude is ready; nothing needed its judgement this time.";
+}
+
 function LivePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
   const slackNote = SLACK_MESSAGES[useSearchParams().get("slack") ?? ""];
@@ -60,7 +68,7 @@ function LivePage() {
                 <button className="btn ghost" type="submit">Disconnect all</button>
               </form>
               <span className="note">
-                {state.brief.account}{state.brief.sources?.slack ? " and Slack" : ""}. {state.brief.usedClaude ? "Urgency and replies by Claude." : "Rule-based urgency (no Claude key set)."}
+                {state.brief.account}{state.brief.sources?.slack ? " and Slack" : ""}. {claudeStatus(state.brief)}
               </span>
             </>
           )}

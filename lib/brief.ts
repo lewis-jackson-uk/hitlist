@@ -1,4 +1,4 @@
-import { triageFollowUpsWithClaude, triageWithClaude } from "./claude";
+import { claudeConfigured, triageFollowUpsWithClaude, triageWithClaude } from "./claude";
 import { rankFollowUps } from "./followups";
 import { prepFlags, rank } from "./scoring";
 import type { Brief, Meeting, WaitingItem } from "./types";
@@ -30,8 +30,10 @@ export async function buildBrief(opts: {
 
   let items = opts.items;
   let usedClaude = false;
+  let claudeError: string | undefined;
+  const onError = (reason: string) => (claudeError ??= reason);
   if (opts.useClaude !== false) {
-    const triage = await triageWithClaude(first.slice(0, CLAUDE_TOP_N), now);
+    const triage = await triageWithClaude(first.slice(0, CLAUDE_TOP_N), now, onError);
     if (triage.size > 0) {
       usedClaude = true;
       items = opts.items.map((i) => {
@@ -41,7 +43,7 @@ export async function buildBrief(opts: {
     }
   }
 
-  const followUps = await buildFollowUps(opts.sent ?? [], opts.meetings, opts.keyContacts, now, opts.useClaude !== false);
+  const followUps = await buildFollowUps(opts.sent ?? [], opts.meetings, opts.keyContacts, now, opts.useClaude !== false, onError);
 
   return {
     generatedAt: now.toISOString(),
@@ -51,6 +53,7 @@ export async function buildBrief(opts: {
     ranked: usedClaude ? rank(items, opts.meetings, opts.keyContacts, now) : first,
     prep: prepFlags(opts.meetings, items, now, opts.account),
     usedClaude: usedClaude || followUps.usedClaude,
+    claude: { configured: claudeConfigured(), error: claudeError },
   };
 }
 
@@ -65,13 +68,14 @@ async function buildFollowUps(
   keyContacts: string[],
   now: Date,
   useClaude: boolean,
+  onError?: (reason: string) => void,
 ): Promise<{ ranked: ReturnType<typeof rankFollowUps>; usedClaude: boolean }> {
   if (sent.length === 0) return { ranked: [], usedClaude: false };
   if (useClaude) {
     // Score everything first (rules would hide "no question asked" emails Claude might still flag).
     const asAsked = sent.map((i) => ({ ...i, urgency: i.urgency ?? { level: 1 as const, source: "rules" as const } }));
     const candidates = rankFollowUps(asAsked, meetings, keyContacts, now).slice(0, 15);
-    const triage = await triageFollowUpsWithClaude(candidates, now);
+    const triage = await triageFollowUpsWithClaude(candidates, now, onError);
     if (triage.size > 0) {
       const judged = sent
         .filter((i) => triage.get(i.id)?.needsFollowUp)
