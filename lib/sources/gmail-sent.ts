@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { mapLimit, type GoogleAuth } from "../google";
 import { GIVE_UP_DAYS } from "../followups";
 import type { Person, WaitingItem } from "../types";
-import { addressesIn, decodeEntities, parseAddress } from "./parse";
+import { addressesIn, decodeEntities, parseAddress, stripQuoted } from "./parse";
 
 const MAX_THREADS = 40;
 
@@ -50,7 +50,7 @@ export async function fetchAwaitingReplies(auth: GoogleAuth, selfEmail: string, 
       url: `https://mail.google.com/mail/?authuser=${encodeURIComponent(self)}#all/${t.id}`,
       from: to,
       subject: h["subject"]?.trim() || "(no subject)",
-      snippet: decodeEntities(last.snippet ?? ""),
+      snippet: stripQuoted(decodeEntities(last.snippet ?? "")),
       lastMessageAt: new Date(Number(last.internalDate ?? now.getTime())).toISOString(),
       messageCount: msgs.length,
       knownContact: msgs.some((m) => {

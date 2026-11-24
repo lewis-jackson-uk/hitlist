@@ -90,7 +90,13 @@ h2 {
   display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: start;
   padding: 16px 18px 16px 14px; cursor: pointer;
 }
-.row-head:hover { background: #f7f9fb; }
+/* Only on devices with a real pointer: on phones a tap would leave the row stuck grey. */
+@media (hover: hover) {
+  .row-head:hover { background: #f7f9fb; }
+}
+/* Let grid children shrink, so long text wraps instead of widening the page. */
+.row > div, .row-head > span { min-width: 0; }
+.who, .subject, .reasons, .quote, .draft, .later span { overflow-wrap: anywhere; }
 .score {
   font-size: 30px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums;
   font-variation-settings: "opsz" 60, "wdth" 75; color: var(--heat-text);

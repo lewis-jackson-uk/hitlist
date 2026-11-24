@@ -2,7 +2,7 @@ import { google, type gmail_v1 } from "googleapis";
 import type { GoogleAuth as OAuth2Client } from "../google";
 import { mapLimit } from "../google";
 import type { WaitingItem } from "../types";
-import { addressesIn, decodeEntities, isAutomated, parseAddress } from "./parse";
+import { addressesIn, decodeEntities, isAutomated, parseAddress, stripQuoted } from "./parse";
 
 const LOOKBACK_DAYS = 14;
 const MAX_THREADS = 60;
@@ -57,7 +57,7 @@ export async function fetchWaitingEmails(auth: OAuth2Client, selfEmail: string):
       url: `https://mail.google.com/mail/?authuser=${encodeURIComponent(self)}#all/${thread.id}`,
       from,
       subject: h["subject"]?.trim() || "(no subject)",
-      snippet: decodeEntities(last.snippet ?? ""),
+      snippet: stripQuoted(decodeEntities(last.snippet ?? "")),
       lastMessageAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
       messageCount: messages.length,
       knownContact: selfInThread,

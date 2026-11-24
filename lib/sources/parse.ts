@@ -33,6 +33,27 @@ export function isAutomated(headers: Record<string, string | undefined>, fromEma
   return NO_REPLY.test(fromEmail);
 }
 
+/**
+ * Cut the quoted history off the end of an email snippet ("On Wed, 4 Nov ... wrote:",
+ * "-----Original Message-----", "From: ... Sent: ..."), leaving only what was actually written.
+ */
+export function stripQuoted(text: string): string {
+  const markers = [
+    /\s+On (Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^]{0,120}?wrote:/i,
+    /\s+On \d{1,2} [A-Z][a-z]+ \d{4}[^]{0,120}?wrote:/,
+    /\s+On [^]{0,120}?<[^>\s]+@[^>\s]+>\s*wrote:/,
+    /\s*-{2,}\s*Original Message\s*-{2,}/i,
+    /\s+From: [^]{0,200}?Sent: /,
+    /\s+Sent from my (iPhone|iPad|Android|Samsung)/i,
+  ];
+  let cut = text.length;
+  for (const re of markers) {
+    const m = text.match(re);
+    if (m?.index !== undefined && m.index > 0) cut = Math.min(cut, m.index);
+  }
+  return text.slice(0, cut).trim();
+}
+
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", apos: "'", nbsp: " " };
 
 export function decodeEntities(s: string): string {
